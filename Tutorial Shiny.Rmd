@@ -1,0 +1,81 @@
+---
+title: "ex1"
+author: "Nitis"
+date: "2022-09-09"
+output: html_document
+---
+
+First we must install the packages
+```{r install packages}
+install.packages("shiny")
+install.packages("agridat")
+install.packages("ggplot2")
+install.packages("dplyr")
+```
+
+A section at the top of the script loading any packages needed for the app to run. shiny is required at the very least, but others like dplyr or ggplot2 could be added as they are needed:
+```{r library}
+library(shiny)
+library(ggplot2)
+library(dplyr)
+library(agridat)
+```
+
+To illustrate how to code a Shiny app, I will recreate a simple app that I wrote to explore some data on the productivity of Barley genotypes.A section loading any data needed by the app:
+```{r data}
+Barley <- as.data.frame(beaven.barley)
+```
+
+An object called ui, which contains information about the layout of the app as it appears in your web browser. fluidPage() defines a layout that will resize according to the size of the browser window. All the app code will be placed within the brackets.
+```{r}
+ui <- 
+  fluidPage(
+    titlePanel("Data Project Nano-One"),
+    sidebarLayout(
+      position = "right",
+      sidebarPanel(h3("Inputs for histogram"), 
+                   selectInput("gen", "1. Pilih jenis", choices = c("Vx100" = "a","XM200L" = "b","Des55" = "c","AQ01" = "d","LX198" = "e"), selected = "a"),
+                   br(),
+                   selectInput("col", "2. Pilih warna histogram", choices = c("biru" = "blue","hijau"="green","merah"="red","abu-abu"="gray"), selected = "grey"),
+                   br(),
+                   sliderInput("bin", "3. Pilih nomor tempat histogram", min=1, max=25, value= c(10)),
+                   br(),
+                   textInput("text", "4. Masukkan text untuk ditampilkan", "")),
+      mainPanel(
+        plotOutput("myhist"),
+        tableOutput("mytable"),
+        textOutput("mytext"),
+        tags$div(style="color:black",
+                 tags$p("Visit us at:"),
+                 tags$a(href = "https://ourcodingclub.github.io", "Coding Club")
+        )
+      )
+    )
+  )
+```
+An object called server, which contains information about the computation of the app, creating plots, tables, maps etc. using information provided by the user. All the app code will be placed within the curly brackets.
+
+```{r}
+server <- function(input, output) {
+  output$myhist <- renderPlot(ggplot(Barley, aes(x = yield)) + 
+                                geom_histogram(bins = input$bin, fill = input$col, group=input$gen, 
+                                               data=Barley[Barley$gen == input$gen,],
+                                               colour = "black"))
+  
+  output$mytext <- renderText(input$text)
+  
+  output$mytable <- renderTable(Barley %>%
+                                  filter(gen == input$gen) %>%
+                                  summarise("Mean" = mean(yield), 
+                                            "Median" = median(yield),
+                                            "STDEV" = sd(yield), 
+                                            "Min" = min(yield),
+                                            "Max" = max(yield)))
+}
+```
+
+A command to run the app. This should be included at the very end of app.R. It tells shiny that the user interface comes from the object called ui and that the server information (data, plots, tables, etc.) comes from the object called server.
+```{r}
+shinyApp(ui = ui, server = server)
+```
+
